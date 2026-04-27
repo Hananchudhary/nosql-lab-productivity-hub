@@ -45,7 +45,13 @@ const { ObjectId } = require('mongodb');
  */
 async function signupUser(db, userData) {
   // TODO: implement
-  throw new Error('signupUser not implemented');
+  const user = await db.collection('users').insertOne({
+    email: userData.email,
+    passwordHash: userData.passwordHash,
+    name: userData.name,
+    createdAt: new Date()
+  });
+  return { insertedId: user.insertedId};
 }
 
 /**
@@ -65,7 +71,10 @@ async function signupUser(db, userData) {
  */
 async function loginFindUser(db, email) {
   // TODO: implement
-  throw new Error('loginFindUser not implemented');
+  const user = await db.collection('users').findOne({ email });
+
+  return user; // returns user object or null if not found
+
 }
 
 /**
