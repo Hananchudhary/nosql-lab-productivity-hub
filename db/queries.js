@@ -299,7 +299,7 @@ async function addTaskTag(db, taskId, tag) {
  * -------------------------------------------------------------
  * Remove a tag from a task's tags array.
  *
- * @param {Db} db
+ * @param {Db}
  * @param {ObjectId} taskId
  * @param {string} tag
  * @returns {Promise<{ matchedCount: number, modifiedCount: number }>}
@@ -351,7 +351,22 @@ async function removeTaskTag(db, taskId, tag) {
  */
 async function toggleSubtask(db, taskId, subtaskTitle, newDone) {
   // TODO: implement
-  throw new Error('toggleSubtask not implemented');
+  const result = await db.collection('tasks').updateOne(
+    {
+      _id: taskId,
+      "subtasks.title": subtaskTitle
+    },
+    {
+      $set: {
+        "subtasks.$.done": newDone
+      }
+    }
+  );
+
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount
+  };
 }
 
 /**
@@ -367,7 +382,8 @@ async function toggleSubtask(db, taskId, subtaskTitle, newDone) {
  */
 async function deleteTask(db, taskId) {
   // TODO: implement
-  throw new Error('deleteTask not implemented');
+  const result = await db.collection('tasks').deleteOne({ _id: taskId });
+  return { deletedCount: result.deletedCount };
 }
 
 /**
@@ -391,7 +407,19 @@ async function deleteTask(db, taskId) {
  */
 async function searchNotes(db, ownerId, tags, projectId) {
   // TODO: implement
-  throw new Error('searchNotes not implemented');
+  const filter = {
+    ownerId: ownerId,
+    tags: { $in: tags }
+  };
+
+  if (projectId) {
+    filter.projectId = projectId;
+  }
+  
+  const notes = await db.collection('notes').find(filter)
+    .sort({ createdAt: -1 }).toArray();
+  console.log(notes);
+  return notes;
 }
 
 /**
@@ -429,7 +457,62 @@ async function searchNotes(db, ownerId, tags, projectId) {
  */
 async function projectTaskSummary(db, ownerId) {
   // TODO: implement
-  throw new Error('projectTaskSummary not implemented');
+  const pipeline = [
+    {
+      $match: {
+        ownerId: ownerId
+      }
+    },
+    
+    {
+      $group: {
+        _id: "$projectId",
+        todo: {
+          $sum: { $cond: [{ $eq: ["$status", "todo"] }, 1, 0] }
+        },
+        inProgress: {
+          $sum: { $cond: [{ $eq: ["$status", "in-progress"] }, 1, 0] }
+        },
+        done: {
+          $sum: { $cond: [{ $eq: ["$status", "done"] }, 1, 0] }
+        },
+        total: {
+          $sum: 1 
+        }
+      }
+    },
+    
+    {
+      $lookup: {
+        from: "projects",
+        localField: "_id",
+        foreignField: "_id",
+        as: "project"
+      }
+    },
+    
+    {
+      $unwind: {
+        path: "$project",
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    
+    {
+      $project: {
+        _id: 1,
+        projectName: "$project.name",
+        todo: 1,
+        inProgress: 1,
+        done: 1,
+        total: 1
+      }
+    }
+  ];
+  
+  const results = await db.collection('tasks').aggregate(pipeline).toArray();
+  console.log(results);
+  return results;
 }
 
 /**
@@ -462,7 +545,54 @@ async function projectTaskSummary(db, ownerId) {
  */
 async function recentActivityFeed(db, ownerId) {
   // TODO: implement
-  throw new Error('recentActivityFeed not implemented');
+  const pipeline = [
+    {
+      $match: {
+        ownerId: ownerId
+      }
+    },
+    
+    {
+      $sort: {
+        createdAt: -1 
+      }
+    },
+    
+    {
+      $limit: 10
+    },
+    
+    {
+      $lookup: {
+        from: "projects",
+        localField: "projectId",
+        foreignField: "_id",
+        as: "project"
+      }
+    },
+    
+    {
+      $unwind: {
+        path: "$project",
+        preserveNullAndEmptyArrays: false
+      }
+    },
+    
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        status: 1,
+        priority: 1,
+        createdAt: 1,
+        projectId: 1,
+        projectName: "$project.name"
+      }
+    }
+  ];
+  
+  const results = await db.collection('tasks').aggregate(pipeline).toArray();
+  return results;
 }
 
 // =============================================================================

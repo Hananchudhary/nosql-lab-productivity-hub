@@ -171,6 +171,7 @@ const { connect } = require('./db/connection');
       ownerId: user1Id,
       projectId: projectIds[0],
       content: 'Discuss homepage layout with team',
+      tags: ['ui', 'backend'],
       createdAt: new Date()
     },
     {
@@ -192,6 +193,7 @@ const { connect } = require('./db/connection');
     {
       ownerId: user1Id,
       projectId: projectIds[1],
+      tags: ['design'],
       content: 'Campaign launch next week',
       createdAt: new Date()
     }
