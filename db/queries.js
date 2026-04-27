@@ -229,8 +229,8 @@ async function createTask(db, taskData) {
     priority: taskData.priority ?? 1,
     tags: taskData.tags ?? [],
     subtasks: taskData.subtasks ?? [],
-    description: null,
-    dueDate: null,
+    description: "",
+    dueDate: new Date(),
     status: "todo",
     createdAt: new Date()
   });
