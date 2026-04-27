@@ -45,13 +45,17 @@ const { ObjectId } = require('mongodb');
  */
 async function signupUser(db, userData) {
   // TODO: implement
-  const user = await db.collection('users').insertOne({
+  const user = await db.collection('users').findOne({ email });
+  if(user){
+    throw new Error('User already exists');
+  }
+  const user1 = await db.collection('users').insertOne({
     email: userData.email,
     passwordHash: userData.passwordHash,
     name: userData.name,
     createdAt: new Date()
   });
-  return { insertedId: user.insertedId};
+  return { insertedId: user1.insertedId};
 }
 
 /**
@@ -94,7 +98,11 @@ async function loginFindUser(db, email) {
  */
 async function listUserProjects(db, ownerId) {
   // TODO: implement
-  throw new Error('listUserProjects not implemented');
+  const projects = await db.collection('projects').find({
+      ownerId: ownerId,
+      archived: false
+    }).sort({ createdAt: -1 }).toArray();
+    return projects;
 }
 
 /**
@@ -112,7 +120,14 @@ async function listUserProjects(db, ownerId) {
  */
 async function createProject(db, projectData) {
   // TODO: implement
-  throw new Error('createProject not implemented');
+  const project = await db.collection('projects').insertOne({
+    ownerId: projectData.ownerId,
+    name: projectData.name,
+    description: projectData.description,
+    createdAt: new Date(),
+    archived: false
+  });
+  return {insertedId: project.insertedId};
 }
 
 /**
@@ -132,7 +147,19 @@ async function createProject(db, projectData) {
  */
 async function archiveProject(db, projectId) {
   // TODO: implement
-  throw new Error('archiveProject not implemented');
+  const pro = await db.collection('projects').findOne({_id: projectId});
+  if(!pro){
+    return {matchedCount: 0, modifiedCount: 0};
+  }
+  const res = await db.collection('projects').updateOne({_id: projectId},
+    {
+      $set: {archived: true}
+    }
+  );
+  if(res){
+    return {matchedCount: 1, modifiedCount: 1};
+  }
+  throw new Error('Archive error');
 }
 
 /**
@@ -154,7 +181,21 @@ async function archiveProject(db, projectId) {
  */
 async function listProjectTasks(db, projectId, status) {
   // TODO: implement
-  throw new Error('listProjectTasks not implemented');
+  const filter = {
+    projectId: projectId
+  };
+
+  if (status) {
+    filter.status = status;
+  }
+
+  const tasks = await db
+    .collection('tasks')
+    .find(filter)
+    .sort({ priority: -1, createdAt: -1 })
+    .toArray();
+
+  return tasks;
 }
 
 /**
@@ -180,7 +221,23 @@ async function listProjectTasks(db, projectId, status) {
  */
 async function createTask(db, taskData) {
   // TODO: implement
-  throw new Error('createTask not implemented');
+  const result = await db.collection('tasks').insertOne({
+    ownerId: taskData.ownerId,
+    projectId: taskData.projectId,
+    title: taskData.title,
+
+    priority: taskData.priority ?? 1,
+    tags: taskData.tags ?? [],
+    subtasks: taskData.subtasks ?? [],
+    description: null,
+    dueDate: null,
+    status: "todo",
+    createdAt: new Date()
+  });
+
+  return {
+    insertedId: result.insertedId
+  };
 }
 
 /**
@@ -197,7 +254,15 @@ async function createTask(db, taskData) {
  */
 async function updateTaskStatus(db, taskId, newStatus) {
   // TODO: implement
-  throw new Error('updateTaskStatus not implemented');
+  const result = await db.collection('tasks').updateOne(
+    { _id: taskId },
+    { $set: { status: newStatus } }
+  );
+
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount
+  };
 }
 
 /**
@@ -218,7 +283,15 @@ async function updateTaskStatus(db, taskId, newStatus) {
  */
 async function addTaskTag(db, taskId, tag) {
   // TODO: implement
-  throw new Error('addTaskTag not implemented');
+  const result = await db.collection('tasks').updateOne(
+    { _id: taskId },
+    { $addToSet: { tags: tag } }
+  );
+
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount
+  };
 }
 
 /**
@@ -239,7 +312,15 @@ async function addTaskTag(db, taskId, tag) {
  */
 async function removeTaskTag(db, taskId, tag) {
   // TODO: implement
-  throw new Error('removeTaskTag not implemented');
+  const result = await db.collection('tasks').updateOne(
+    { _id: taskId },
+    { $pull: { tags: tag } }
+  );
+
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount
+  };
 }
 
 /**
