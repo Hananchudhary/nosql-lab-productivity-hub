@@ -21,10 +21,10 @@ const { connect } = require('./db/connection');
   const db = await connect();
 
   // OPTIONAL: clear existing data so re-seeding is idempotent
-  // await db.collection('users').deleteMany({});
-  // await db.collection('projects').deleteMany({});
-  // await db.collection('tasks').deleteMany({});
-  // await db.collection('notes').deleteMany({});
+  await db.collection('users').deleteMany({});
+  await db.collection('projects').deleteMany({});
+  await db.collection('tasks').deleteMany({});
+  await db.collection('notes').deleteMany({});
 
   // =============================================================================
   //  TODO: Insert your seed data below.
@@ -53,6 +53,149 @@ const { connect } = require('./db/connection');
   //      createdAt: new Date()
   //    }
   // =============================================================================
+  const passwordHash1 = await bcrypt.hash('password123', 10);
+  const passwordHash2 = await bcrypt.hash('secure456', 10);
+
+  const user1 = await db.collection('users').insertOne({
+    email: 'alice@example.com',
+    passwordHash: passwordHash1,
+    name: 'Alice',
+    createdAt: new Date()
+  });
+
+  const user2 = await db.collection('users').insertOne({
+    email: 'bob@example.com',
+    passwordHash: passwordHash2,
+    name: 'Bob',
+    createdAt: new Date()
+  });
+
+  const user1Id = user1.insertedId;
+  const user2Id = user2.insertedId;
+  
+  const projects = await db.collection('projects').insertMany([
+    {
+      ownerId: user1Id,
+      name: 'Website Redesign',
+      description: 'Revamp company website',
+      archived: false,
+      createdAt: new Date()
+    },
+    {
+      ownerId: user1Id,
+      name: 'Marketing Campaign',
+      archived: false,
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      name: 'Mobile App',
+      description: 'Build new mobile app',
+      archived: false,
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      name: 'Internal Tools',
+      archived: true,
+      createdAt: new Date()
+    }
+  ]);
+
+  const projectIds = Object.values(projects.insertedIds);
+
+  await db.collection('tasks').insertMany([
+    {
+      ownerId: user1Id,
+      projectId: projectIds[0],
+      title: 'Design homepage',
+      status: 'todo',
+      priority: 3,
+      tags: ['design', 'ui'],
+      subtasks: [
+        { title: 'Wireframe', done: true },
+        { title: 'Mockup', done: false }
+      ],
+      createdAt: new Date(),
+      dueDate: new Date() // optional field example
+    },
+    {
+      ownerId: user1Id,
+      projectId: projectIds[1],
+      title: 'Prepare ads',
+      status: 'in-progress',
+      priority: 2,
+      tags: ['marketing'],
+      subtasks: [
+        { title: 'Copywriting', done: false }
+      ],
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      projectId: projectIds[2],
+      title: 'Setup backend',
+      status: 'todo',
+      priority: 4,
+      tags: ['backend'],
+      subtasks: [],
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      projectId: projectIds[2],
+      title: 'Implement login',
+      status: 'in-progress',
+      priority: 5,
+      tags: ['auth'],
+      subtasks: [
+        { title: 'JWT setup', done: true },
+        { title: 'OAuth', done: false }
+      ],
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      projectId: projectIds[3],
+      title: 'Refactor codebase',
+      status: 'done',
+      priority: 1,
+      tags: ['cleanup'],
+      subtasks: [],
+      createdAt: new Date()
+    }
+  ]);
+
+  await db.collection('notes').insertMany([
+    {
+      ownerId: user1Id,
+      projectId: projectIds[0],
+      content: 'Discuss homepage layout with team',
+      createdAt: new Date()
+    },
+    {
+      ownerId: user1Id,
+      content: 'Random idea: add blog section',
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      projectId: projectIds[2],
+      content: 'API structure finalized',
+      createdAt: new Date()
+    },
+    {
+      ownerId: user2Id,
+      content: 'Remember to optimize queries',
+      createdAt: new Date()
+    },
+    {
+      ownerId: user1Id,
+      projectId: projectIds[1],
+      content: 'Campaign launch next week',
+      createdAt: new Date()
+    }
+  ]);
 
   console.log('TODO: implement seed.js');
   process.exit(0);
